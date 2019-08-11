@@ -2,40 +2,54 @@ package kaau
 
 import (
 	"fmt"
-	"gomscode/src/logger"
 	"gomscode/src/utility"
 	"html/template"
 	"net/http"
 )
 
-// Todo exported
-type Todo struct {
-	Title string
-	Done  bool
-}
-
-// TodoPageData exported
-type TodoPageData struct {
-	Name string
-}
+// Kubeconfig defining  as global variable
+var Kubeconfig string
 
 // HomeHandler export
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	//	fmt.Fprintf(w, "Hello, you've requested: %s\n", r.URL.Path)
-
 	userName := utility.GetUserName(r)
-	data := new(TodoPageData)
-	data.Name = userName
-	logger.LogOut(data.Name)
-
+	fmt.Println(userName)
 	if !utility.IsEmpty(userName) {
 		//fmt.Fprintf(w, "Hello, %s you logged to the site.. continue broswing \n", userName)
+		kubeclient := GetKubeClient(Kubeconfig)
+		namespaces := GetNameSpaces(kubeclient)
+		namespaces.UserName = userName
+		namespaces.Host = r.Host
+		fmt.Println(namespaces)
+		//		clusterRole := GetClusterRole(kubeclient)
+		//		fmt.Println(clusterRole)
 		tmpl := template.Must(template.ParseFiles("web/templetes/index.html"))
-		tmpl.Execute(w, data)
+		tmpl.Execute(w, namespaces)
+
 	} else {
 		http.Redirect(w, r, "/", 302)
 	}
 
+}
+
+//ViewRolePageHandler exported
+func ViewRolePageHandler(w http.ResponseWriter, r *http.Request) {
+	QueryNamespace := r.URL.Query().Get("namespace")
+	kubeclient := GetKubeClient(Kubeconfig)
+	RolesDetails := GetRoles(kubeclient, QueryNamespace)
+	fmt.Println(RolesDetails)
+	tmpl := template.Must(template.ParseFiles("web/templetes/viewrole.html"))
+	w.Header().Set("Content-Type", "text/html")
+	tmpl.Execute(w, RolesDetails)
+}
+// ViewClusterRolePageHandler Exported
+func ViewClusterRolePageHandler(w http.ResponseWriter, r *http.Request) {
+	kubeclient := GetKubeClient(Kubeconfig)
+	ClusterRolesDetails := GetClusterRole(kubeclient)
+	fmt.Println(ClusterRolesDetails)
+	tmpl := template.Must(template.ParseFiles("web/templetes/viewclusterrole.html"))
+	w.Header().Set("Content-Type", "text/html")
+	tmpl.Execute(w, ClusterRolesDetails)
 }
 
 // AppHandler export

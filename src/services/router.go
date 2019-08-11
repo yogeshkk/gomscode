@@ -42,7 +42,8 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/app", Middleware(kaau.AppHandler))
 //	router.PathPrefix("/css").Handler(http.FileServer(http.Dir("/web/css")))
 	router.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
-
+	router.HandleFunc("/viewrole", Middleware(kaau.ViewRolePageHandler))
+	router.HandleFunc("/viewclusterrole", Middleware(kaau.ViewClusterRolePageHandler))
 
 	return router
 }

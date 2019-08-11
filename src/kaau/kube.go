@@ -1,36 +1,53 @@
 package kaau
 
 import (
-	"flag"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
-	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func kube() {
+// NameSpaceDetails exported
+type NameSpaceDetails struct {
+	Name string
+}
 
-	var ns, label, field, maxClaims string
-	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-	flag.StringVar(&ns, "namespace", "", "namespace")
-	flag.StringVar(&label, "l", "", "Label selector")
-	flag.StringVar(&field, "f", "", "Field selector")
-	flag.StringVar(&maxClaims, "max-claims", "100Gi", "Maximum total claims to watch")
-	flag.StringVar(&kubeconfig, "kubeconfig", kubeconfig, "kubeconfig file")
-	flag.Parse()
+// RoleDetails exported
+type RoleDetails struct {
+	Name string
+}
 
-	// total resource quantities
-	//	var totalClaimedQuant resource.Quantity
-	//	maxClaimedQuant := resource.MustParse(maxClaims)
+// ClusterRoleDetails exported
+type ClusterRoleDetails struct {
+	Name string
+}
 
-	// bootstrap config
-	fmt.Println()
-	fmt.Println("Using kubeconfig: ", kubeconfig)
+// DataIndexPage exported
+type DataIndexPage struct {
+	UserName    string
+	Host        string
+	NameSpeces  []NameSpaceDetails
+	ClusterRole []ClusterRoleDetails
+}
+
+// DataRolePage  exported
+type DataRolePage struct {
+	UserName   string
+	NameSpeces []NameSpaceDetails
+	Roles      []RoleDetails
+}
+
+// DataClusterRolePage exported
+type DataClusterRolePage struct {
+	UserName   string
+	NameSpeces []NameSpaceDetails
+	Roles      []ClusterRoleDetails
+}
+
+// GetKubeClient Exported
+func GetKubeClient(kubeconfig string) *kubernetes.Clientset {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
@@ -38,23 +55,75 @@ func kube() {
 
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
-	fmt.Println(reflect.TypeOf(clientset))
 	if err != nil {
 		log.Fatal(err)
 	}
-	api := clientset.CoreV1()
-	fmt.Println(reflect.TypeOf(api))
-	// initial list
-	listOptions := metav1.ListOptions{LabelSelector: label, FieldSelector: field}
 
-	namespace, err := api.Namespaces().List(listOptions)
+	return clientset
+}
+
+// GetNameSpaces exported
+func GetNameSpaces(clntset *kubernetes.Clientset) DataIndexPage {
+	var DataIndex DataIndexPage
+	namespace, err := clntset.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Print("Name\t\t Status\n")
-	for _, v := range namespace.Items {
-		fmt.Printf("%s\t\t  %s\n", v.Name, v.Status)
-		//		getpods(clientset, v.Name)
-		//		getsvc(clientset, v.Name)
+	for _, namespace := range namespace.Items {
+		NamespaceRole, err := clntset.RbacV1().Roles(namespace.Name).List(metav1.ListOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, role := range NamespaceRole.Items {
+			DataIndex.NameSpeces = append(DataIndex.NameSpeces, NameSpaceDetails{
+
+				Name: namespace.Name,
+			})
+			DataIndex.ClusterRole = append(DataIndex.ClusterRole, ClusterRoleDetails{
+
+				Name: role.Name,
+			})
+			fmt.Println(namespace.Name, role.Name)
+		}
 	}
+	return DataIndex
+}
+
+// GetRoles exported
+func GetRoles(clntset *kubernetes.Clientset, Namespace string) DataIndexPage {
+	var DataRoles DataIndexPage
+	AllNamespace, err := clntset.CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, items := range AllNamespace.Items {
+		DataRoles.NameSpeces = append(DataRoles.NameSpeces, NameSpaceDetails{
+			Name: items.Name,
+		})
+	}
+	NamespaceRole, err := clntset.RbacV1().Roles(Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, items := range NamespaceRole.Items {
+		DataRoles.ClusterRole = append(DataRoles.ClusterRole, ClusterRoleDetails{
+			Name: items.Name,
+		})
+	}
+	return DataRoles
+}
+
+// GetClusterRole exported
+func GetClusterRole(clntset *kubernetes.Clientset) DataIndexPage {
+	var DataClusterRole DataIndexPage
+	ClusteRole, err := clntset.RbacV1().ClusterRoles().List(metav1.ListOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, items := range ClusteRole.Items {
+		DataClusterRole.ClusterRole = append(DataClusterRole.ClusterRole, ClusterRoleDetails{
+			Name: items.Name,
+		})
+	}
+	return DataClusterRole
 }
