@@ -2,8 +2,6 @@
 
 Kubernetes Authentication Authorisation Utility
 
-Kubernetes Authentication Authorisation Utility
-
 This is a Hobby Project yet not completed. This project aims to provide a management utility to Authorisation and Authentication for Kubernetes from a simple UI
 
 Read bit about RBAC
@@ -11,7 +9,7 @@ https://medium.com/@yogeshkunjir/kubernetes-has-your-r-back-5b4c983be0
 
 
 Status of Project.
-Currently, it can Authentication via web
+Currently, it can Authentication via web. you can see password hard coded in project ;-)
 It can connect to Kubernetes via kubernetes client.go library
 It can Get roles and cluster roles and show in UI.
 
